@@ -60,17 +60,20 @@
 
   /* Zones cliquables discrètes sur les 6 destinations listées sur le panneau gauche */
   .dest {
-    left: 2%;
-    width: 19%;
-    height: 4.1%;
+    left: 3%;
+    width: 14%;
+    height: 3.2%;
     background: rgba(255,255,255,0);
   }
-  .dest-hanoi    { top: 10.3%; }
-  .dest-halong   { top: 14.7%; }
-  .dest-hoian    { top: 19.1%; }
-  .dest-hue      { top: 23.5%; }
-  .dest-hcm      { top: 27.9%; }
-  .dest-mekong   { top: 32.3%; }
+  .dest-hanoi    { top: 6.7%; }
+  .dest-halong   { top: 8.9%; }
+  .dest-hoian    { top: 11.4%; }
+  .dest-hue      { top: 13.7%; }
+  .dest-hcm      { top: 16.7%; }
+  .dest-mekong   { top: 18.9%; }
+  .dest-phuquoc  { top: 21.5%; }
+  .tile { border-radius: 10px; }
+  .pin:active, .dest:active { background: rgba(255,200,80,.35); box-shadow: 0 0 0 2px rgba(255,200,80,.9); }
 
   /* Barre de navigation sous l'image (hors illustration, jamais de superposition) */
   .navbar{display:flex;gap:12px;width:100%;max-width:680px;margin:14px auto 0;padding:0 14px;}
@@ -92,13 +95,21 @@
 <div class="page">
   <img src="images/page1.webp" alt="Bienvenue au Vietnam - Mini-guide Tha&#xEF; Malin - sommaire Hano&#xEF;, Baie d'Ha Long, H&#xF4;i An, Hu&#xE9;, H&#xF4; Chi Minh, M&#xE9;kong, Ph&#xFA; Quoc">
 
-  <!-- Zones destinations du bandeau : pas encore de lien (pages pas construites) -->
-  <div class="hotspot dest dest-hanoi" aria-label="Hano&#xEF;"></div>
-  <div class="hotspot dest dest-halong" aria-label="Baie d'Ha Long"></div>
-  <div class="hotspot dest dest-hoian" aria-label="H&#xF4;i An"></div>
-  <div class="hotspot dest dest-hue" aria-label="Hu&#xE9;"></div>
-  <div class="hotspot dest dest-hcm" aria-label="H&#xF4; Chi Minh"></div>
-  <div class="hotspot dest dest-mekong" aria-label="M&#xE9;kong"></div>
+  <!-- Zones destinations du bandeau : vers les pages destinations -->
+  <a href="page8.html" class="hotspot dest dest-hanoi" aria-label="Hano&#xEF;"></a>
+  <a href="page9.html" class="hotspot dest dest-halong" aria-label="Baie d'Ha Long"></a>
+  <a href="page13.html" class="hotspot dest dest-hoian" aria-label="H&#xF4;i An"></a>
+  <a href="page12.html" class="hotspot dest dest-hue" aria-label="Hu&#xE9;"></a>
+  <a href="page16.html" class="hotspot dest dest-hcm" aria-label="H&#xF4; Chi Minh"></a>
+  <a href="page17.html" class="hotspot dest dest-mekong" aria-label="M&#xE9;kong"></a>
+
+  <a href="page18.html" class="hotspot dest dest-phuquoc" aria-label="Phú Quốc"></a>
+  <a href="page9.html" class="hotspot tile" style="left:2.2%;top:71.8%;width:15.2%;height:7.8%;" aria-label="Baie d'Ha Long"></a>
+  <a href="page8.html" class="hotspot tile" style="left:18.0%;top:71.8%;width:15.2%;height:7.8%;" aria-label="Hanoï"></a>
+  <a href="page13.html" class="hotspot tile" style="left:34.4%;top:71.8%;width:15.2%;height:7.8%;" aria-label="Hội An"></a>
+  <a href="page12.html" class="hotspot tile" style="left:2.2%;top:79.6%;width:15.2%;height:7.8%;" aria-label="Huế"></a>
+  <a href="page17.html" class="hotspot tile" style="left:18.0%;top:79.6%;width:15.2%;height:7.8%;" aria-label="Mékong"></a>
+  <a href="page18.html" class="hotspot tile" style="left:34.4%;top:79.6%;width:15.2%;height:7.8%;" aria-label="Phú Quốc"></a>
 
   <!-- Bouton principal : page suivante -->
 </div>
@@ -109,6 +120,6 @@
 
 
 <script src="gate.js"></script>
-<script src="pwa.js" data-name="Mini-guide Vietnam" data-slug="vietnam"></script>
+<script src="pwa.js" data-nav="pages" data-booking="vn" data-booking-page="23" data-toc="0|Couverture;1|Bienvenue au Vietnam;2|Pourquoi le Vietnam ?;3|Comment y aller depuis La Réunion;4|Parler vietnamien;5|Nos incontournables;6|Préparer son voyage;7|Itinéraires selon la durée;8|Hanoï;9|Baie d’Ha Long;10|Ninh Binh;11|Sapa et Ha Giang;12|Huế;13|Hội An;14|Nha Trang;15|Da Nang;16|Hô Chi Minh-Ville;17|Delta du Mékong;18|Phú Quốc;19|Côn Đảo;20|Gastronomie vietnamienne;21|Shopping et souvenirs;22|Conseils pratiques;23|Réserver son voyage;24|Merci et à très bientôt" data-weather="Hanoï:21.03,105.85;Hoi An:15.88,108.34;Ho Chi Minh-Ville:10.82,106.63;Phu Quoc:10.22,103.96" data-first="0" data-total="24" data-name="Mini-guide Vietnam" data-slug="vietnam"></script>
 </body>
 </html>

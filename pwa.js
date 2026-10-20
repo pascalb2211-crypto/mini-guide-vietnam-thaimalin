@@ -26,7 +26,7 @@
   }
 
   var css = [
-    '.tmpwa-banner{position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:2500;max-width:520px;margin:0 auto;background:#1a1d24;border:1px solid #d35400;border-radius:16px;padding:14px 16px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.55);color:#fff;font-family:"Segoe UI",Arial,sans-serif}',
+    '.tmpwa-banner{position:fixed;left:12px;right:12px;bottom:max(12px,env(safe-area-inset-bottom));z-index:9500;max-width:520px;margin:0 auto;background:#1a1d24;border:1px solid #d35400;border-radius:16px;padding:14px 16px;display:flex;gap:12px;align-items:center;box-shadow:0 10px 30px rgba(0,0,0,.55);color:#fff;font-family:"Segoe UI",Arial,sans-serif}',
     '.tmpwa-banner img{width:44px;height:44px;border-radius:10px;flex:none}',
     '.tmpwa-banner p{margin:0;flex:1;font-size:14px;line-height:1.35;color:#dcd6d0}',
     '.tmpwa-banner strong{display:block;color:#f0955a;font-size:15px}',
@@ -175,4 +175,143 @@
   }
   window.addEventListener('online', function(){ if(done) offlineSetup(); });
   if(document.body) watch(); else document.addEventListener('DOMContentLoaded', watch);
+})();
+
+/* ===================== BARRE DE BOUTONS EN BAS (téléphone et tablette) =====================
+   Dans le navigateur, rien ne change. Une fois le guide installé, une barre fixe en bas de l'écran
+   donne un accès direct : couverture, page précédente / suivante, liste des pages (ou sommaire).
+========================================================================================================= */
+(function(){
+  'use strict';
+  var me = document.querySelector('script[src*="pwa.js"]');
+  var MODE = me && me.getAttribute('data-nav');                 /* "pages" = une page HTML par page ; "spa" = guide en une seule page */
+  if(!MODE) return;
+  if(window.top !== window.self) return;
+  var TOTAL = parseInt(me.getAttribute('data-total') || '0', 10);
+  var FIRST = parseInt(me.getAttribute('data-first') || '1', 10);   /* 0 si le guide a une couverture page0 */
+
+  function ready(fn){ if(document.body) fn(); else document.addEventListener('DOMContentLoaded', fn); }
+  function locked(){
+    var g = document.getElementById('pwGate');
+    if(g) return !g.classList.contains('hidden');
+    return !!document.querySelector('[class*="Gate"]');
+  }
+  var css = '#tmTab{display:none;position:fixed;left:0;right:0;bottom:0;z-index:1500;background:#0d1117f2;border-top:1px solid #ffffff1f;padding:6px 4px max(8px,env(safe-area-inset-bottom));backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-family:"Segoe UI",Arial,sans-serif}' +
+    '#tmTab button{flex:1;min-width:0;border:0;background:none;color:#cfd6dd;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 2px;font:600 10.5px/1.1 "Segoe UI",Arial,sans-serif;cursor:pointer;-webkit-tap-highlight-color:transparent}' +
+    '#tmTab button b{font-size:21px;line-height:1;font-weight:400}#tmTab button:active{background:#ffffff14;border-radius:10px}' +
+    '#tmTab button.on{color:#f0955a}#tmTab button[disabled]{opacity:.35}' +
+    '#tmTab .mid b{font:800 15px/1 "Segoe UI",Arial,sans-serif;color:#fff;margin-top:3px}' +
+    '#tmSheet{position:fixed;inset:0;z-index:1600;background:#000a;display:none;align-items:flex-end;justify-content:center}#tmSheet.open{display:flex}' +
+    '#tmSheet .box{width:100%;max-width:560px;max-height:78vh;overflow:auto;background:#161a21;color:#fff;border-radius:20px 20px 0 0;padding:16px 16px max(18px,env(safe-area-inset-bottom));font-family:"Segoe UI",Arial,sans-serif}' +
+    '#tmSheet h3{margin:0 0 12px;font-size:16px}#tmSheet .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}' +
+    '#tmSheet .grid a,#tmSheet .grid button,#tmSheet .list button{border:1px solid #ffffff2a;background:#ffffff0d;color:#fff;border-radius:12px;padding:12px 0;text-align:center;text-decoration:none;font:700 15px "Segoe UI",Arial,sans-serif;cursor:pointer}' +
+    '#tmSheet .book a{display:block;border:1px solid #ffffff2a;background:#ffffff0d;color:#fff;border-radius:12px;padding:12px 16px;text-decoration:none}#tmSheet .book a b{display:block;font-size:15px}#tmSheet .book a small{opacity:.7;font-size:12.5px}#tmSheet .toc button{display:flex;align-items:center;gap:12px;width:100%}#tmSheet .toc .num{flex:0 0 34px;height:34px;border-radius:50%;background:#ffffff1a;display:flex;align-items:center;justify-content:center;font-size:14px}#tmSheet .toc .cur{background:#d3540033;border-color:#d35400}#tmSheet .toc .cur .num{background:#d35400}#tmSheet .toc .addfav{background:#d35400;border-color:#d35400;margin-bottom:6px}#tmSheet .grid .cur{background:#d35400;border-color:#d35400}#tmSheet .list{display:grid;gap:8px}#tmSheet .list button{text-align:left;padding:14px 16px;font-size:15px}' +
+    '@media(max-width:800px){#tmTab{display:flex}#tmTab.lock{display:none}body.tmHasTab{padding-bottom:calc(84px + env(safe-area-inset-bottom)) !important}body.tmHasTab .zoomBtn{bottom:92px}}';
+
+  function el(tag, attrs, html){ var e = document.createElement(tag); for(var k in attrs||{}) e.setAttribute(k, attrs[k]); if(html != null) e.innerHTML = html; return e; }
+  function btn(icon, label, fn, cls){ var b = el('button', { type: 'button', 'class': cls || '' }, '<b>' + icon + '</b>' + label); b.addEventListener('click', fn); return b; }
+
+  function build(){
+    if(document.getElementById('tmTab')) return;
+    var st = el('style', {}, css); document.head.appendChild(st);
+    var bar = el('div', { id: 'tmTab', role: 'navigation', 'aria-label': 'Navigation du guide' });
+    var sheet = el('div', { id: 'tmSheet' }); var box = el('div', { 'class': 'box' }); sheet.appendChild(box); document.body.appendChild(sheet);
+    sheet.addEventListener('click', function(e){ if(e.target === sheet) sheet.classList.remove('open'); });
+    function openSheet(title, node){ box.innerHTML = ''; box.appendChild(el('h3', {}, title)); box.appendChild(node); sheet.classList.add('open'); }
+
+    if(MODE === 'pages'){
+      var m = location.pathname.match(/page(\d+)(\.html)?$/); var cur = m ? parseInt(m[1], 10) : FIRST;
+      var last = TOTAL || cur;
+      var slug = (me.getAttribute('data-slug') || 'guide');
+      function url(n){ return 'page' + n + '.html'; }
+      var TOC = {}; (me.getAttribute('data-toc') || '').split(';').forEach(function(x){ var i = x.indexOf('|'); if(i > 0) TOC[parseInt(x.slice(0, i), 10)] = x.slice(i + 1); });
+      function title(n){ return TOC[n] || ('Page ' + n); }
+      var FK = 'tm-fav-' + slug;
+      function favs(){ try{ return JSON.parse(localStorage.getItem(FK) || '[]'); }catch(e){ return []; } }
+      function saveFavs(a){ try{ localStorage.setItem(FK, JSON.stringify(a)); }catch(e){} }
+      function row(n, extra){ var b = el('button', { type: 'button', 'class': n === cur ? 'cur' : '' }, '<span class="num">' + (n === 0 ? '★' : n) + '</span>' + title(n) + (extra || '')); b.addEventListener('click', function(){ location.href = url(n); }); return b; }
+      var cover = btn('📕', 'Couverture', function(){ location.href = url(FIRST); });
+      var toc = btn('☷', 'Sommaire', function(){
+        var l = el('div', { 'class': 'list toc' }); for(var n = FIRST; n <= last; n++) l.appendChild(row(n));
+        openSheet('Sommaire', l);
+        var c = l.querySelector('.cur'); if(c) setTimeout(function(){ c.scrollIntoView({ block: 'center' }); }, 30);
+      });
+      var fav = btn('♡', 'Favoris', function(){
+        var l = el('div', { 'class': 'list toc' }); var f = favs(); var on = f.indexOf(cur) >= 0;
+        var add = el('button', { type: 'button', 'class': 'addfav' }, on ? '♥ Retirer cette page des favoris' : '♡ Ajouter cette page aux favoris');
+        add.addEventListener('click', function(){ var g = favs(); var i = g.indexOf(cur); if(i >= 0) g.splice(i, 1); else g.push(cur); g.sort(function(x, y){ return x - y; }); saveFavs(g); refreshFav(); sheet.classList.remove('open'); });
+        l.appendChild(add);
+        if(!f.length) l.appendChild(el('p', { style: 'margin:6px 2px;opacity:.7;font-size:14px' }, 'Aucun favori pour le moment.')); else f.forEach(function(n){ l.appendChild(row(n)); });
+        openSheet('Mes favoris', l);
+      });
+      function refreshFav(){ var on = favs().indexOf(cur) >= 0; var i = fav.querySelector('b'); i.textContent = on ? '♥' : '♡'; fav.classList.toggle('on', on); }
+      refreshFav();
+      var items = [cover, toc, fav];
+      var WX = me.getAttribute('data-weather');                  /* "Ville:lat,lon;Ville:lat,lon" */
+      if(WX){
+        var wx = btn('🌤️', 'Météo', function(){
+          var l = el('div', { 'class': 'wx' }, '<p style="margin:0;opacity:.7">Chargement…</p>'); openSheet('Météo en direct', l);
+          var places = WX.split(';').map(function(x){ var a = x.split(':'); var c = a[1].split(','); return { n: a[0], la: c[0], lo: c[1] }; });
+          var ico = function(c){ return c === 0 ? '☀️' : c < 3 ? '⛅' : c < 4 ? '☁️' : c < 50 ? '🌫️' : c < 70 ? '🌧️' : c < 80 ? '🌨️' : c < 85 ? '🌦️' : c < 95 ? '🌧️' : '⛈️'; };
+          Promise.all(places.map(function(p){
+            return fetch('https://api.open-meteo.com/v1/forecast?latitude=' + p.la + '&longitude=' + p.lo + '&current=temperature_2m,weather_code,relative_humidity_2m&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max&timezone=auto&forecast_days=3')
+              .then(function(r){ return r.json(); }).then(function(d){ p.d = d; return p; });
+          })).then(function(r){
+            l.innerHTML = r.map(function(p){ var d = p.d, c = d.current, dl = d.daily;
+              var days = [0,1,2].map(function(i){ return '<span style="flex:1;text-align:center;font-size:12px;opacity:.85">' + ['Auj.','Demain','Après'][i] + '<br>' + Math.round(dl.temperature_2m_min[i]) + '–' + Math.round(dl.temperature_2m_max[i]) + '°<br>💧' + (dl.precipitation_probability_max[i] || 0) + '%</span>'; }).join('');
+              return '<div style="border:1px solid #ffffff2a;background:#ffffff0d;border-radius:14px;padding:12px 14px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center"><b style="font-size:16px">' + p.n + '</b><span style="font-size:22px">' + ico(c.weather_code) + ' ' + Math.round(c.temperature_2m) + '°C</span></div><div style="font-size:12px;opacity:.7;margin:2px 0 8px">Humidité ' + c.relative_humidity_2m + '%</div><div style="display:flex;gap:6px">' + days + '</div></div>'; }).join('');
+          }).catch(function(){ l.innerHTML = '<p style="margin:0">La météo a besoin d\'une connexion Internet. Réessaie quand tu es en ligne.</p>'; });
+        });
+        items.push(wx);
+      }
+      var BK = me.getAttribute('data-booking');                  /* code pays Booking : vn, la, kh, th */
+      if(BK){
+        var BP = parseInt(me.getAttribute('data-booking-page') || '0', 10);   /* page « Centre de réservation » du guide, si elle existe */
+        var bk = btn('🧳', 'Réserver', function(){
+          if(BP){ location.href = url(BP); return; }
+          var rows = [
+            ['✈️ Vols', 'Comparer et réserver sur Trip.com', 'https://fr.trip.com/?Allianceid=9852508&SID=327644129&trip_sub3=D19106369&locale=fr-fr'],
+            ['🏨 Hôtels', 'Hébergements sur Booking.com', 'https://www.dpbolvw.net/click-101855269-12677526?url=' + encodeURIComponent('https://www.booking.com/country/' + BK + '.fr.html')],
+            ['🎟️ Activités', 'Excursions et visites sur Klook', 'https://www.klook.com/fr/?aid=129660'],
+            ['📶 eSIM', 'Internet dès l’arrivée (Airalo)', 'https://airalo.pxf.io/PzWeQQ'],
+            ['📶 eSIM illimitée', 'Holafly, code promo THAIMALIN', 'https://holafly.sjv.io/OYdRjN'],
+            ['🛡️ Assurance voyage', 'SafetyWing', 'https://safetywing.com/nomad-insurance?referenceID=26576610&campaign=thai-malin&utm_campaign=thai-malin&utm_source=26576610&utm_medium=Ambassador']];
+          var l = el('div', { 'class': 'list book' });
+          rows.forEach(function(r){ l.appendChild(el('a', { href: r[2], target: '_blank', rel: 'noopener sponsored' }, '<b>' + r[0] + '</b><small>' + r[1] + '</small>')); });
+          openSheet('Réserver mon voyage', l);
+        });
+        items.push(bk);
+      }
+      items.forEach(function(b){ bar.appendChild(b); });
+    } else {                                                      /* guide en une seule page (fonctions déjà présentes dans index.html) */
+      function call(f){ try{ f(); }catch(e){} }
+      bar.appendChild(btn('📕', 'Couverture', function(){ call(function(){ tmCoverShow(); }); }));
+      bar.appendChild(btn('◀', 'Précédent', function(){ call(function(){ go(page - 1); }); }));
+      bar.appendChild(btn('☷', 'Sommaire', function(){ call(function(){ show('summary'); }); }));
+      bar.appendChild(btn('▶', 'Suivant', function(){ call(function(){ go(page + 1); }); }));
+      bar.appendChild(btn('⋯', 'Outils', function(){
+        var l = el('div', { 'class': 'list' });
+        [['🔗 Liens utiles', 'links'], ['☑️ Ma checklist', 'checklist'], ['💱 Euro ↔ Baht', 'convert'], ['⏱️ Compte à rebours', 'countdown'], ['❤️ Mes favoris', 'favorites']].forEach(function(x){
+          var b = el('button', { type: 'button' }, x[0]); b.addEventListener('click', function(){ sheet.classList.remove('open'); call(function(){ show(x[1]); }); }); l.appendChild(b); });
+        var fav = el('button', { type: 'button' }, '♡ Ajouter cette page aux favoris'); fav.addEventListener('click', function(){ sheet.classList.remove('open'); call(function(){ toggleFavorite(); }); }); l.appendChild(fav);
+        openSheet('Outils', l);
+      }));
+    }
+    document.body.appendChild(bar); document.body.classList.add('tmHasTab');
+  }
+
+  /* Agrandissement : un appui sur l'image (hors boutons cliquables) l'ouvre en grand, depuis le haut */
+  function zoomSetup(){
+    var img = document.querySelector('.page img'); var mm = location.pathname.match(/page(\d+)(\.html)?$/); if(!img || (mm && parseInt(mm[1], 10) === FIRST)) return;
+    var z = el('div', { id: 'tmZoom' }); var zi = el('img', { alt: '' }); var zx = el('button', { type: 'button', 'aria-label': 'Fermer' }, '✕'); z.appendChild(zi); z.appendChild(zx); document.body.appendChild(z);
+    var zc = document.createElement('style'); zc.textContent = '#tmZoom{position:fixed;inset:0;z-index:1700;background:#000f;overflow:auto;display:none;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom}#tmZoom.open{display:block}#tmZoom img{display:block;width:170%;max-width:none;height:auto}#tmZoom button{position:fixed;top:max(12px,env(safe-area-inset-top));right:12px;width:44px;height:44px;border-radius:50%;border:0;background:#000b;color:#fff;font-size:22px;z-index:1}.page img{cursor:zoom-in}'; document.head.appendChild(zc);
+    function close(){ z.classList.remove('open'); document.documentElement.style.overflow = ''; }
+    zx.addEventListener('click', close); z.addEventListener('click', function(e){ if(e.target === z) close(); });
+    img.addEventListener('click', function(){ zi.src = img.currentSrc || img.src; z.classList.add('open'); z.scrollTop = 0; z.scrollLeft = 0; document.documentElement.style.overflow = 'hidden'; });
+  }
+  function sync(){ var bar = document.getElementById('tmTab'); if(bar) bar.classList.toggle('lock', locked()); }
+  ready(function(){
+    build(); sync(); if(MODE === 'pages') zoomSetup();
+    new MutationObserver(sync).observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+  });
 })();
