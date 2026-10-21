@@ -282,6 +282,8 @@
         });
         items.push(bk);
       }
+      var pdf = btn('🖨️', 'PDF', function(){ printAll(); });
+      items.push(pdf);
       items.forEach(function(b){ bar.appendChild(b); });
     } else {                                                      /* guide en une seule page (fonctions déjà présentes dans index.html) */
       function call(f){ try{ f(); }catch(e){} }
@@ -300,14 +302,59 @@
     document.body.appendChild(bar); document.body.classList.add('tmHasTab');
   }
 
-  /* Agrandissement : un appui sur l'image (hors boutons cliquables) l'ouvre en grand, depuis le haut */
+  /* Agrandissement : un appui sur une case de la page l'ouvre seule, en grand (zones dans zones.json).
+     En dehors d'une case : agrandissement centré sur l'endroit touché. */
+  var ZONES = null;
+  function loadZones(){
+    try{ fetch('zones.json', { cache: 'no-cache' }).then(function(r){ return r.ok ? r.json() : null; }).then(function(j){ ZONES = j; }).catch(function(){}); }catch(e){}
+  }
+  function zoneAt(n, x, y){
+    var zs = (ZONES && ZONES[n]) || []; var best = null, ba = 1e12;
+    zs.forEach(function(z){ if(x >= z[0] && x <= z[2] && y >= z[1] && y <= z[3]){ var a = (z[2] - z[0]) * (z[3] - z[1]); if(a < ba){ ba = a; best = z; } } });
+    return best;
+  }
   function zoomSetup(){
     var img = document.querySelector('.page img'); var mm = location.pathname.match(/page(\d+)(\.html)?$/); if(!img || (mm && parseInt(mm[1], 10) === FIRST)) return;
+    var n = mm ? parseInt(mm[1], 10) : 0;
+    loadZones();
     var z = el('div', { id: 'tmZoom' }); var zi = el('img', { alt: '' }); var zx = el('button', { type: 'button', 'aria-label': 'Fermer' }, '✕'); z.appendChild(zi); z.appendChild(zx); document.body.appendChild(z);
     var zc = document.createElement('style'); zc.textContent = '#tmZoom{position:fixed;inset:0;z-index:1700;background:#000f;overflow:auto;display:none;-webkit-overflow-scrolling:touch;touch-action:pan-x pan-y pinch-zoom}#tmZoom.open{display:block}#tmZoom img{display:block;width:170%;max-width:none;height:auto}#tmZoom button{position:fixed;top:max(12px,env(safe-area-inset-top));right:12px;width:44px;height:44px;border-radius:50%;border:0;background:#000b;color:#fff;font-size:22px;z-index:1}.page img{cursor:zoom-in}'; document.head.appendChild(zc);
     function close(){ z.classList.remove('open'); document.documentElement.style.overflow = ''; }
     zx.addEventListener('click', close); z.addEventListener('click', function(e){ if(e.target === z) close(); });
-    img.addEventListener('click', function(){ zi.src = img.currentSrc || img.src; z.classList.add('open'); z.scrollTop = 0; z.scrollLeft = 0; document.documentElement.style.overflow = 'hidden'; });
+    img.addEventListener('click', function(e){
+      var r = img.getBoundingClientRect(); var fx = (e.clientX - r.left) / r.width, fy = (e.clientY - r.top) / r.height;
+      var zone = zoneAt(n, fx * 1024, fy * 1536);
+      zi.style.width = ''; zi.src = img.currentSrc || img.src; z.classList.add('open'); document.documentElement.style.overflow = 'hidden';
+      function place(){
+        var VW = z.clientWidth || innerWidth, VH = z.clientHeight || innerHeight;
+        if(zone){
+          var zw = zone[2] - zone[0], zh = zone[3] - zone[1]; var IW = Math.min(VW * 0.94 / (zw / 1024), VW * 4.5); zi.style.width = IW + 'px';
+          var IH = zi.offsetHeight || IW * 1.5;
+          z.scrollLeft = Math.max(0, zone[0] / 1024 * IW - VW * 0.03);
+          z.scrollTop = Math.max(0, zone[1] / 1536 * IH - Math.max(40, (VH - zh / 1536 * IH) / 2));
+        } else {
+          z.scrollLeft = Math.max(0, fx * zi.offsetWidth - VW / 2); z.scrollTop = Math.max(0, fy * zi.offsetHeight - VH / 2);
+        }
+      }
+      place(); if(zi.complete) requestAnimationFrame(place); else zi.addEventListener('load', place, { once: true });
+    });
+    /* petit conseil au premier affichage */
+    try{ if(!localStorage.getItem('tm-zone-hint')){ var h = el('div', { id: 'tmHint' }, '💡 Touche une case pour l’agrandir'); var hc = document.createElement('style'); hc.textContent = '#tmHint{position:fixed;left:50%;bottom:calc(96px + env(safe-area-inset-bottom));transform:translate(-50%,20px);background:#1a1d24;color:#fff;border:1px solid #d35400;border-radius:999px;padding:10px 16px;font:700 14px "Segoe UI",Arial,sans-serif;z-index:1650;opacity:0;pointer-events:none;transition:.4s;white-space:nowrap}#tmHint.on{opacity:1;transform:translate(-50%,0)}'; document.head.appendChild(hc); document.body.appendChild(h); setTimeout(function(){ h.classList.add('on'); }, 1500); setTimeout(function(){ h.classList.remove('on'); localStorage.setItem('tm-zone-hint', '1'); }, 6500); } }catch(e){}
+  }
+
+  /* Impression / PDF : toutes les pages du guide, une par feuille A4 */
+  function printAll(){
+    var old = document.getElementById('tmPrint'); if(old) old.remove();
+    var box = el('div', { id: 'tmPrint' }); var imgs = [];
+    var cur = document.querySelector('.page img'); var src = cur ? (cur.getAttribute('src') || '') : '';
+    var mm = src.match(/^(.*?)page(\d+)(\.\w+)$/); var base = mm ? mm[1] : 'images/'; var ext = mm ? mm[3] : '.webp';
+    for(var n = FIRST; n <= (TOTAL || 0); n++){
+      var im = new Image(); im.alt = ''; im.src = (n === 0 ? base + 'cover' + ext : base + 'page' + n + ext); box.appendChild(im); imgs.push(im);
+    }
+    document.body.appendChild(box);
+    var st = document.getElementById('tmPrintCss');
+    if(!st){ st = document.createElement('style'); st.id = 'tmPrintCss'; st.textContent = '#tmPrint{display:none}@page{size:A4;margin:0}@media print{body>*:not(#tmPrint){display:none!important}#tmPrint{display:block!important}#tmPrint img{display:block;width:198mm;height:297mm;margin:0 auto;object-fit:contain;break-after:page;page-break-after:always}html,body{background:#fff!important;-webkit-print-color-adjust:exact;print-color-adjust:exact}}'; document.head.appendChild(st); }
+    Promise.all(imgs.map(function(i){ return i.complete ? 1 : new Promise(function(r){ i.onload = i.onerror = r; }); })).then(function(){ setTimeout(function(){ window.print(); }, 150); });
   }
   function sync(){ var bar = document.getElementById('tmTab'); if(bar) bar.classList.toggle('lock', locked()); }
   ready(function(){
