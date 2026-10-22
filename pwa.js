@@ -288,6 +288,7 @@
       var today = btn('📅', 'Aujourd’hui', function(){
         var dep = ls('tm-departure'), ret = ls('tm-return'), CK = 'tm-city-' + slug;
         var l = el('div', { 'class': 'today' });
+        l.appendChild(el('a', { 'class': 'tdBtn', href: 'https://pascalb2211-crypto.github.io/mon-voyage-hub/', style: 'display:block;text-align:center;margin-bottom:12px' }, '🧭 Mon voyage : vol, documents, programme'));
         var st = el('div', { 'class': 'tdCard' }); l.appendChild(st);
         function status(){
           var dd = dayDiff(dep), dr = dayDiff(ret), big = 'Bienvenue ! 🌺', sub = 'Entre ta date de départ pour suivre ton voyage jour après jour.';
